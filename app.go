@@ -19,13 +19,14 @@ func main() {
 	flag.StringVar(&dbFile, "file", pwd+"/data/GeoLite2-City.mmdb", "")
 	flag.Parse()
 
-	mmdb, err := geoip2.NewCityReaderFromFile(dbFile)
-	if err != nil {
-		panic(err.Error())
-	}
-
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if !r.URL.Query().Has("ip") {
+			http.NotFound(w, r)
+			return
+		}
+
+		mmdb, err := geoip2.NewCityReaderFromFile(dbFile)
+		if err != nil {
 			http.NotFound(w, r)
 			return
 		}
