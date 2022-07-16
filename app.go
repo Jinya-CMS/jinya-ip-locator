@@ -44,23 +44,24 @@ func main() {
 
 		cityResult, err := mmdb.Lookup(net.ParseIP(r.URL.Query().Get("ip")))
 		if err == nil {
-			region := ""
+			region := "Unknown region"
 			if len(cityResult.Subdivisions) > 0 {
 				region = cityResult.Subdivisions[0].Names["en"]
 			}
 			country := cityResult.Country.Names["en"]
 			if country == "" {
-				returnValue = data{
-					City:    "Unknown city",
-					Country: "Unknown country",
-					Region:  "Unknown region",
-				}
-			} else {
-				returnValue = data{
-					City:    cityResult.City.Names["en"],
-					Country: cityResult.Country.Names["en"],
-					Region:  region,
-				}
+				country = "Unknown country"
+			}
+
+			city := cityResult.City.Names["en"]
+			if city == "" {
+				city = "Unknow city"
+			}
+
+			returnValue = data{
+				City:    city,
+				Country: country,
+				Region:  region,
 			}
 		}
 
