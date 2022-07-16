@@ -1,23 +1,60 @@
 package main
 
 import (
+	"compress/gzip"
 	"encoding/json"
-	"flag"
 	"github.com/IncSW/geoip2"
+	"github.com/go-co-op/gocron"
+	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
 	"os"
+	"time"
 )
 
-func main() {
-	pwd, err := os.Getwd()
+func downloadIpToLocationDb() {
+	date := time.Now()
+	res, err := http.Get("https://download.db-ip.com/free/dbip-city-lite-" + date.Format("2006-01") + ".mmdb.gz")
 	if err != nil {
-		pwd = ""
+		log.Println("Failed to download IP2L database")
+		return
 	}
-	dbFile := ""
-	flag.StringVar(&dbFile, "file", pwd+"/data/GeoLite2-City.mmdb", "")
-	flag.Parse()
+
+	gzReader, err := gzip.NewReader(res.Body)
+	defer gzReader.Close()
+	if err != nil {
+		log.Println("Failed to download IP2L database")
+		return
+	}
+
+	data, err := ioutil.ReadAll(gzReader)
+	if err != nil {
+		log.Println("Failed to extract IP2L database")
+		return
+	}
+
+	err = os.MkdirAll("./data", 0775)
+	if err != nil {
+		log.Println("Failed to create IP2L database directory")
+		return
+	}
+	err = ioutil.WriteFile("./data/ip2l.mmdb", data, 0775)
+	if err != nil {
+		log.Println("Failed to write IP2L database")
+	}
+}
+
+func main() {
+	downloadIpToLocationDb()
+
+	s := gocron.NewScheduler(time.UTC)
+	_, err := s.Every(1).Day().Do(downloadIpToLocationDb)
+	if err != nil {
+		log.Println("Couldn't setup cron job please be aware, that the database will not be refreshed")
+	}
+
+	s.StartAsync()
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if !r.URL.Query().Has("ip") {
@@ -26,19 +63,21 @@ func main() {
 		}
 
 		type data struct {
-			City    string `json:"city"`
-			Country string `json:"country"`
-			Region  string `json:"region"`
+			City       string `json:"city"`
+			Country    string `json:"country"`
+			Region     string `json:"region"`
+			ProvidedBy string `json:"providedBy"`
 		}
 
 		returnValue := data{}
 
-		mmdb, err := geoip2.NewCityReaderFromFile(dbFile)
+		mmdb, err := geoip2.NewCityReaderFromFile("./data/ip2l.mmdb")
 		if err != nil {
 			returnValue = data{
-				City:    "Unknown city",
-				Country: "Unknown country",
-				Region:  "Unknown region",
+				City:       "Unknown city",
+				Country:    "Unknown country",
+				Region:     "Unknown region",
+				ProvidedBy: "https://db-ip.com",
 			}
 		}
 
@@ -59,9 +98,10 @@ func main() {
 			}
 
 			returnValue = data{
-				City:    city,
-				Country: country,
-				Region:  region,
+				City:       city,
+				Country:    country,
+				Region:     region,
+				ProvidedBy: "https://db-ip.com",
 			}
 		}
 
@@ -72,6 +112,8 @@ func main() {
 			return
 		}
 
+		w.Header().Add("Content-Type", "application/json")
+		w.Header().Add("X-DB-Provided-By", "https://db-ip.com")
 		_, _ = w.Write(marshal)
 	})
 
