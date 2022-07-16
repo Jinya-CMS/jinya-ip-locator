@@ -25,32 +25,46 @@ func main() {
 			return
 		}
 
-		mmdb, err := geoip2.NewCityReaderFromFile(dbFile)
-		if err != nil {
-			http.NotFound(w, r)
-			return
-		}
-
-		cityResult, err := mmdb.Lookup(net.ParseIP(r.URL.Query().Get("ip")))
-		if err != nil {
-			http.NotFound(w, r)
-			return
-		}
-
-		region := ""
-		if len(cityResult.Subdivisions) > 0 {
-			region = cityResult.Subdivisions[0].Names["en"]
-		}
-
-		marshal, err := json.Marshal(struct {
+		type data struct {
 			City    string `json:"city"`
 			Country string `json:"country"`
 			Region  string `json:"region"`
-		}{
-			City:    cityResult.City.Names["en"],
-			Country: cityResult.Country.Names["en"],
-			Region:  region,
-		})
+		}
+
+		returnValue := data{}
+
+		mmdb, err := geoip2.NewCityReaderFromFile(dbFile)
+		if err != nil {
+			returnValue = data{
+				City:    "Unknown city",
+				Country: "Unknown country",
+				Region:  "Unknown region",
+			}
+		}
+
+		cityResult, err := mmdb.Lookup(net.ParseIP(r.URL.Query().Get("ip")))
+		if err == nil {
+			region := ""
+			if len(cityResult.Subdivisions) > 0 {
+				region = cityResult.Subdivisions[0].Names["en"]
+			}
+			country := cityResult.Country.Names["en"]
+			if country == "" {
+				returnValue = data{
+					City:    "Unknown city",
+					Country: "Unknown country",
+					Region:  "Unknown region",
+				}
+			} else {
+				returnValue = data{
+					City:    cityResult.City.Names["en"],
+					Country: cityResult.Country.Names["en"],
+					Region:  region,
+				}
+			}
+		}
+
+		marshal, err := json.Marshal(returnValue)
 
 		if err != nil {
 			http.NotFound(w, r)
