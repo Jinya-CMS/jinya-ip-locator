@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"github.com/IncSW/geoip2"
 	"github.com/go-co-op/gocron"
-	"io/ioutil"
+	"io"
 	"log"
 	"net"
 	"net/http"
@@ -28,7 +28,7 @@ func downloadIpToLocationDb() {
 		return
 	}
 
-	data, err := ioutil.ReadAll(gzReader)
+	data, err := io.ReadAll(gzReader)
 	if err != nil {
 		log.Println("Failed to extract IP2L database")
 		return
@@ -39,7 +39,7 @@ func downloadIpToLocationDb() {
 		log.Println("Failed to create IP2L database directory")
 		return
 	}
-	err = ioutil.WriteFile("./data/ip2l.mmdb", data, 0775)
+	err = os.WriteFile("./data/ip2l.mmdb", data, 0775)
 	if err != nil {
 		log.Println("Failed to write IP2L database")
 	}
