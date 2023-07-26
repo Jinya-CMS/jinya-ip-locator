@@ -34,6 +34,8 @@ binary-build-linux:
   artifacts:
     paths:
       - jinya-ip-locator
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
 
 binary-build-windows:
   image: quay.imanuel.dev/dockerhub/library---golang:1.20-alpine
@@ -43,3 +45,5 @@ binary-build-windows:
   artifacts:
     paths:
       - GOOS=windows jinya-ip-locator.exe
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
