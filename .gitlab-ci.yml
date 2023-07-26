@@ -1,0 +1,45 @@
+stages:
+  - test
+  - build
+
+test:
+  image: quay.imanuel.dev/dockerhub/library---golang:1.20-alpine
+  stage: test
+  script:
+    - go vet .
+    - go build -o jinya-ip-locator
+
+docker-build:
+  image: quay.imanuel.dev/dockerhub/library---docker:stable
+  stage: build
+  services:
+    - docker:dind
+  before_script:
+    - docker login -u "$QUAY_USER" -p "$QUAY_PASSWORD" quay.imanuel.dev
+  script:
+    - docker build --pull -t "quay.imanuel.dev/jinya/jinya-ip-locator:1.0.${CI_PIPELINE_IID}" -f ./Dockerfile .
+    - docker tag "quay.imanuel.dev/jinya/jinya-ip-locator:1.0.${CI_PIPELINE_IID}" "quay.imanuel.dev/jinya/jinya-ip-locator:latest"
+    - docker push "quay.imanuel.dev/jinya/jinya-ip-locator:1.0.${CI_PIPELINE_IID}"
+    - docker push "quay.imanuel.dev/jinya/jinya-ip-locator:latest"
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+      exists:
+        - Dockerfile
+
+binary-build-linux:
+  image: quay.imanuel.dev/dockerhub/library---golang:1.20-alpine
+  stage: build
+  script:
+    - go build -o jinya-ip-locator
+  artifacts:
+    paths:
+      - jinya-ip-locator
+
+binary-build-windows:
+  image: quay.imanuel.dev/dockerhub/library---golang:1.20-alpine
+  stage: build
+  script:
+    - go build -o jinya-ip-locator.exe
+  artifacts:
+    paths:
+      - GOOS=windows jinya-ip-locator.exe
