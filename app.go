@@ -15,7 +15,7 @@ import (
 
 func downloadIpToLocationDb() {
 	date := time.Now()
-	res, err := http.Get("https://download.db-ip.com/free/dbip-city-lite-" + date.Format("2006-01") + ".mmdb.gz")
+	res, err := http.Get("https://download.db-ip.com/free/dbip-city-lite-" + date.AddDate(0, -1, 0).Format("2006-01") + ".mmdb.gz")
 	if err != nil {
 		log.Println("Failed to download IP2L database")
 		return
