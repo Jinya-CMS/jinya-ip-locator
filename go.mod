@@ -1,6 +1,6 @@
 module jinya-ip-locator
 
-go 1.20
+go 1.21
 
 require (
 	github.com/IncSW/geoip2 v0.1.2

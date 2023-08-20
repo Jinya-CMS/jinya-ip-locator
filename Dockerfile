@@ -1,4 +1,4 @@
-FROM quay.imanuel.dev/dockerhub/library---golang:1.20-alpine as build
+FROM harbor.ulbricht.casa/proxy/library/golang:1.21-alpine as build
 WORKDIR /app
 COPY . .
 
