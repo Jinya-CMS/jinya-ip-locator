@@ -4,7 +4,7 @@ COPY . .
 
 RUN go build -o /jinya-ip-locator
 
-FROM quay.imanuel.dev/dockerhub/library---alpine:latest
+FROM harbor.ulbricht.casa/proxy/library/alpine:latest
 
 COPY --from=build /jinya-ip-locator /jinya-ip-locator
 
