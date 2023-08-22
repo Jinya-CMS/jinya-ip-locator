@@ -1,6 +1,7 @@
 stages:
   - test
   - build
+  - deploy
 
 test:
   image: harbor.ulbricht.casa/proxy/library/golang:1.21-alpine
@@ -10,15 +11,21 @@ test:
     - go build -o jinya-ip-locator
 
 docker-build:
-  image: harbor.ulbricht.casa/proxy/library/docker:dind
-  stage: build
+  stage: deploy
+  image:
+    name: gcr.io/kaniko-project/executor:debug
+    pull_policy: always
+    entrypoint: [""]
   before_script:
-    - docker login -u "$HARBOR_USER" -p "$HARBOR_PASSWORD" harbor.ulbricht.casa
+    - echo $KANIKO_DOCKERHUB_AND_HARBOR > /kaniko/.docker/config.json
   script:
-    - docker build --pull -t "harbor.ulbricht.casa/jinya/jinya-ip-locator:1.0.${CI_PIPELINE_IID}" -f ./Dockerfile .
-    - docker tag "harbor.ulbricht.casa/jinya/jinya-ip-locator:1.0.${CI_PIPELINE_IID}" "harbor.ulbricht.casa/jinya/jinya-ip-locator:latest"
-    - docker push "harbor.ulbricht.casa/jinya/jinya-ip-locator:1.0.${CI_PIPELINE_IID}"
-    - docker push "harbor.ulbricht.casa/jinya/jinya-ip-locator:latest"
+    - /kaniko/executor
+      --context "${CI_PROJECT_DIR}"
+      --dockerfile "${CI_PROJECT_DIR}/Dockerfile"
+      --destination "harbor.ulbricht.casa/jinya/jinya-ip-locator:1.0.${CI_PIPELINE_IID}"
+      --destination "harbor.ulbricht.casa/jinya/jinya-ip-locator:latest"
+      --destination "jinyacms/jinya-ip-locator:1.0.${CI_PIPELINE_IID}"
+      --destination "jinyacms/jinya-ip-locator:latest"
   rules:
     - if: $CI_COMMIT_BRANCH == "v1"
       exists:
