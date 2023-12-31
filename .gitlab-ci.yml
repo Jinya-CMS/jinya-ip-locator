@@ -4,7 +4,7 @@ stages:
   - deploy
 
 test:
-  image: harbor.ulbricht.casa/proxy/library/golang:1.21-alpine
+  image: library/golang:1.21-alpine
   stage: test
   script:
     - go vet .
@@ -17,13 +17,13 @@ docker-build:
     pull_policy: always
     entrypoint: [""]
   before_script:
-    - echo $KANIKO_DOCKERHUB_AND_HARBOR > /kaniko/.docker/config.json
+    - echo "{\"auths\":{\"${CI_REGISTRY}\":{\"auth\":\"$(printf "%s:%s" "${CI_REGISTRY_USER}" "${CI_REGISTRY_PASSWORD}" | base64 | tr -d '\n')\"},\"https://index.docker.io/v1/\":{\"auth\":\"$DOCKER_TOKEN\"}}}" > /kaniko/.docker/config.json
   script:
     - /kaniko/executor
       --context "${CI_PROJECT_DIR}"
       --dockerfile "${CI_PROJECT_DIR}/Dockerfile"
-      --destination "harbor.ulbricht.casa/jinya/jinya-ip-locator:1.0.${CI_PIPELINE_IID}"
-      --destination "harbor.ulbricht.casa/jinya/jinya-ip-locator:latest"
+      --destination "${CI_REGISTRY_IMAGE}:1.0.${CI_PIPELINE_IID}"
+      --destination "${CI_REGISTRY_IMAGE}:latest"
       --destination "jinyacms/jinya-ip-locator:1.0.${CI_PIPELINE_IID}"
       --destination "jinyacms/jinya-ip-locator:latest"
   rules:
@@ -32,7 +32,7 @@ docker-build:
         - Dockerfile
 
 binary-build-linux:
-  image: harbor.ulbricht.casa/proxy/library/golang:1.21-alpine
+  image: library/golang:1.21-alpine
   stage: build
   script:
     - go build -o jinya-ip-locator
@@ -43,7 +43,7 @@ binary-build-linux:
     - if: $CI_COMMIT_BRANCH == "v1"
 
 binary-build-windows:
-  image: harbor.ulbricht.casa/proxy/library/golang:1.21-alpine
+  image: library/golang:1.21-alpine
   stage: build
   variables:
     GOOS: windows 
