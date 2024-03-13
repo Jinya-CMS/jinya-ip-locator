@@ -22,8 +22,8 @@ docker-build:
     - /kaniko/executor
       --context "${CI_PROJECT_DIR}"
       --dockerfile "${CI_PROJECT_DIR}/Dockerfile"
-      --destination "${CI_REGISTRY_IMAGE}/ARCH:1.0.${CI_PIPELINE_IID}"
-      --destination "${CI_REGISTRY_IMAGE}/ARCH:latest"
+      --destination "${CI_REGISTRY_IMAGE}/${ARCH}:1.0.${CI_PIPELINE_IID}"
+      --destination "${CI_REGISTRY_IMAGE}/${ARCH}:latest"
       --destination "jinyacms/jinya-ip-locator:1.0.${CI_PIPELINE_IID}"
       --destination "jinyacms/jinya-ip-locator:latest"
   rules:
