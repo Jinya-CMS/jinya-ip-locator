@@ -3,7 +3,7 @@ module jinya-ip-locator
 go 1.21
 
 require (
-	github.com/IncSW/geoip2 v0.1.2
+	github.com/IncSW/geoip2 v0.1.3
 	github.com/go-co-op/gocron v1.37.0
 )
 
