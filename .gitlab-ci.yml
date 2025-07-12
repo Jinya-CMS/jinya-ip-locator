@@ -12,20 +12,15 @@ test:
 
 docker-build:
   stage: deploy
-  image:
-    name: gcr.io/kaniko-project/executor:debug
-    pull_policy: always
-    entrypoint: [""]
+  image: registry.ulbricht.casa/docker-images/buildah:latest
   before_script:
-    - echo "{\"auths\":{\"${CI_REGISTRY}\":{\"auth\":\"$(printf "%s:%s" "${CI_REGISTRY_USER}" "${CI_REGISTRY_PASSWORD}" | base64 | tr -d '\n')\"},\"https://index.docker.io/v1/\":{\"auth\":\"$DOCKER_TOKEN\"}}}" > /kaniko/.docker/config.json
+    - echo "$CI_REGISTRY_PASSWORD" | buildah login -u "$CI_REGISTRY_USER" --password-stdin $CI_REGISTRY
+    - echo "$DOCKERHUB_PASSWORD" | buildah login -u "$DOCKERHUB_USER" --password-stdin docker.io
+  variables:
+    IMG: $CI_REGISTRY_IMAGE/$ARCH:1.0.$CI_PIPELINE_IID
   script:
-    - /kaniko/executor
-      --context "${CI_PROJECT_DIR}"
-      --dockerfile "${CI_PROJECT_DIR}/Dockerfile"
-      --destination "${CI_REGISTRY_IMAGE}/${ARCH}:1.0.${CI_PIPELINE_IID}"
-      --destination "${CI_REGISTRY_IMAGE}/${ARCH}:latest"
-      --destination "jinyacms/jinya-ip-locator:1.0.${CI_PIPELINE_IID}"
-      --destination "jinyacms/jinya-ip-locator:latest"
+    - buildah build --platform=linux/$ARCH -t $IMG .
+    - buildah push $IMG
   rules:
     - if: $CI_COMMIT_BRANCH == "v1"
   parallel:
@@ -33,28 +28,27 @@ docker-build:
       - ARCH: amd64
       - ARCH: arm64
   tags:
-    - runner-${ARCH}
+    - performance
 
 merge-manifests:
   stage: deploy
   needs:
     - job: docker-build
       artifacts: false
-  image:
-    name: mplatform/manifest-tool:alpine
-    entrypoint: [""]
+  image: registry.ulbricht.casa/docker-images/buildah:latest
+  before_script:
+    - echo "$CI_REGISTRY_PASSWORD" | buildah login -u "$CI_REGISTRY_USER" --password-stdin $CI_REGISTRY
+    - echo "$DOCKERHUB_PASSWORD" | buildah login -u "$DOCKERHUB_USER" --password-stdin docker.io
   script:
-    - >-
-      manifest-tool
-      --username=${CI_REGISTRY_USER}
-      --password=${CI_REGISTRY_PASSWORD}
-      push from-args
-      --platforms linux/amd64,linux/arm64
-      --template ${CI_REGISTRY_IMAGE}/ARCH:${TAG}
-      --target ${CI_REGISTRY_IMAGE}:${TAG}
+    - buildah manifest create $FQ_IMAGE_NAME
+    - buildah manifest add $FQ_IMAGE_NAME docker://$CI_REGISTRY_IMAGE/amd64:1.0.$CI_PIPELINE_IID
+    - buildah manifest add $FQ_IMAGE_NAME docker://$CI_REGISTRY_IMAGE/arm64:1.0.$CI_PIPELINE_IID
+    - buildah manifest push --all $FQ_IMAGE_NAME
   parallel:
     matrix:
-      - TAG: latest
-      - TAG: 1.0.${CI_PIPELINE_IID}
+      - FQ_IMAGE_NAME: $CI_REGISTRY_IMAGE:latest
+      - FQ_IMAGE_NAME: $CI_REGISTRY_IMAGE:1.0.$CI_PIPELINE_IID
+      - FQ_IMAGE_NAME: docker.io/jinyacms/jinya-ip-locator:latest
+      - FQ_IMAGE_NAME: docker.io/jinyacms/jinya-ip-locator:1.0.$CI_PIPELINE_IID
   rules:
     - if: $CI_COMMIT_BRANCH == "v1"
