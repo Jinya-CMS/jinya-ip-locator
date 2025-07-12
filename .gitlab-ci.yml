@@ -28,7 +28,7 @@ docker-build:
       - ARCH: amd64
       - ARCH: arm64
   tags:
-    - performance
+    - runner-$ARCH
 
 merge-manifests:
   stage: deploy
